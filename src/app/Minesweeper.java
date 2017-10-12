@@ -81,7 +81,8 @@ public class Minesweeper{
 			
 		}
 		
-		
+		System.out.println("Game Over. Final board: ");
+		printBoard(cluesBoard);
 		in.close();
 		
 	}
