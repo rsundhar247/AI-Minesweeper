@@ -58,11 +58,18 @@ public class Minesweeper{
 				boardChanged = false;
 				expandClues();
 			}
+			System.out.println("Clues: ");
 			printBoard(cluesBoard);
+			System.out.println("Open Adjacent Spaces: ");
+			printBoard(adjacencyBoard);
+			System.out.println("Adjacent Mines: ");
+			printBoard(adjacentMines);
 			
+			int[] nextXY = nextRequestedXY();
+			int[]next = getCoordinate(nextXY[0], nextXY[1]);
+			System.out.println("Enter state of next move: " + next[0] + ", " + next[1]);
 			int command = in.nextInt();
-			if (command == 1) break;
-
+			putClue(nextXY[0], nextXY[1], command);
 			
 		}
 		
@@ -118,38 +125,50 @@ public class Minesweeper{
 	public static void flagMine(int x, int y){ //flag x, y as mine
 		cluesBoard[x][y] = 'M';
 		boardChanged=true;
-		if ((x-1)>=0 && (x-1)<length && (y-1)>=0 && (y-1)<width && isNumClue(cluesBoard[x-1][y-1])){
+		if ((x-1)>=0 && (x-1)<length && (y-1)>=0 && (y-1)<width){
 			adjacencyBoard[x-1][y-1]--;
 			adjacentMines[x-1][y-1]++;
 		}
-		if ((x)>=0 && (x)<length && (y-1)>=0 && (y-1)<width && isNumClue(cluesBoard[x][y-1])){
+		if ((x)>=0 && (x)<length && (y-1)>=0 && (y-1)<width){
 			adjacencyBoard[x][y-1]--;
 			adjacentMines[x][y-1]++;
 		}
-		if ((x+1)>=0 && (x+1)<length && (y-1)>=0 && (y-1)<width && isNumClue(cluesBoard[x+1][y+1])){
+		if ((x+1)>=0 && (x+1)<length && (y-1)>=0 && (y-1)<width){
 			adjacencyBoard[x+1][y-1]--;
 			adjacentMines[x+1][y-1]++;
 		}
-		if ((x-1)>=0 && (x-1)<length && (y)>=0 && (y)<width && isNumClue(cluesBoard[x-1][y])){
+		if ((x-1)>=0 && (x-1)<length && (y)>=0 && (y)<width){
 			adjacencyBoard[x-1][y]--;
 			adjacentMines[x-1][y]++;
 		}
-		if ((x+1)>=0 && (x+1)<length && (y)>=0 && (y)<width && isNumClue(cluesBoard[x+1][y])){
+		if ((x+1)>=0 && (x+1)<length && (y)>=0 && (y)<width ){
 			adjacencyBoard[x+1][y]--;
 			adjacentMines[x+1][y]++;
 		}
-		if ((x-1)>=0 && (x-1)<length && (y+1)>=0 && (y+1)<width && isNumClue(cluesBoard[x-1][y+1])){
+		if ((x-1)>=0 && (x-1)<length && (y+1)>=0 && (y+1)<width ){
 			adjacencyBoard[x-1][y+1]--;
 			adjacentMines[x-1][y+1]++;
 		}
-		if ((x)>=0 && (x)<length && (y+1)>=0 && (y+1)<width && isNumClue(cluesBoard[x][y+1])){
+		if ((x)>=0 && (x)<length && (y+1)>=0 && (y+1)<width ){
 			adjacencyBoard[x][y+1]--;
 			adjacentMines[x][y+1]++;
 		}
-		if ((x+1)>=0 && (x+1)<length && (y+1)>=0 && (y+1)<width && isNumClue(cluesBoard[x+1][y+1])){
+		if ((x+1)>=0 && (x+1)<length && (y+1)>=0 && (y+1)<width ){
 			adjacencyBoard[x+1][y+1]--;
 			adjacentMines[x+1][y+1]++;
 		}
+	}
+	
+	public static int[] nextRequestedXY(){
+		int[] XY = new int[2];
+		int x, y;
+		do{
+			x = (int)(Math.random() * length);
+			y = (int)(Math.random() * width);
+		} while (cluesBoard[x][y]!='?');
+		XY[0] = x;
+		XY[1] = y;
+		return XY;
 	}
 	
 	public static int[][] countAdjacent(int length, int width){ //counts the unknown adjacent cells
@@ -196,6 +215,12 @@ public class Minesweeper{
 		int x = length-input2;
 		int y = input1-1;
 		return new int[]{x, y};
+	}
+	
+	public static int[] getCoordinate(int x, int y){
+		int input1 = y+1;
+		int input2 = length-x;
+		return new int[]{input1, input2};
 	}
 	
 	public static void printBoard(char[][] board){
