@@ -15,6 +15,7 @@ C - cell marked as clear
 
 package app;
 import java.util.Scanner;
+import java.util.Stack;
 
 public class Minesweeper{
 	
@@ -23,10 +24,12 @@ public class Minesweeper{
 	static int[][] adjacentMines; //holds how many marked mines in adjacent cells
 	static char[][] cluesBoard;
 	static boolean boardChanged = false;
+	static Stack<int[]> stack;
 	
 	public static void main(String[] args){
 		System.out.println("Initializing Minesweeper...");
 		Scanner in = new Scanner(System.in);
+		stack = new Stack<int[]>();
 		
 		System.out.println("Enter length of board: ");
 		length = in.nextInt();
@@ -65,7 +68,12 @@ public class Minesweeper{
 			System.out.println("Adjacent Mines: ");
 			printBoard(adjacentMines);
 			
-			int[] nextXY = nextRequestedXY();
+			int[] nextXY;
+			if (!stack.isEmpty()){
+				nextXY = stack.pop();
+			} else {
+				nextXY = nextRequestedXY();
+			}
 			int[]next = getCoordinate(nextXY[0], nextXY[1]);
 			System.out.println("Enter state of next move: " + next[0] + ", " + next[1]);
 			int command = in.nextInt();
@@ -88,20 +96,45 @@ public class Minesweeper{
 	public static void putClue(int x, int y, int clue){
 		if (clue == 0){
 			cluesBoard[x][y] = '0';
-			if ((x-1)>=0 && (x-1)<length && (y-1)>=0 && (y-1)<width && cluesBoard[x-1][y-1] == '?') cluesBoard[x-1][y-1] = 'C';
-			if ((x)>=0 && (x)<length && (y-1)>=0 && (y-1)<width && cluesBoard[x][y-1] == '?') cluesBoard[x][y-1] = 'C';
-			if ((x+1)>=0 && (x+1)<length && (y-1)>=0 && (y-1)<width && cluesBoard[x+1][y-1] == '?') cluesBoard[x+1][y-1] = 'C';
-			if ((x-1)>=0 && (x-1)<length && (y)>=0 && (y)<width && cluesBoard[x-1][y] == '?') cluesBoard[x-1][y] = 'C';
-			if ((x+1)>=0 && (x+1)<length && (y)>=0 && (y)<width && cluesBoard[x+1][y] == '?') cluesBoard[x+1][y] = 'C';
-			if ((x-1)>=0 && (x-1)<length && (y+1)>=0 && (y+1)<width && cluesBoard[x-1][y+1] == '?') cluesBoard[x-1][y+1] = 'C';
-			if ((x)>=0 && (x)<length && (y+1)>=0 && (y+1)<width && cluesBoard[x][y+1] == '?') cluesBoard[x][y+1] = 'C';
-			if ((x+1)>=0 && (x+1)<length && (y+1)>=0 && (y+1)<width && cluesBoard[x+1][y+1] == '?') cluesBoard[x+1][y+1] = 'C';
+			if ((x-1)>=0 && (x-1)<length && (y-1)>=0 && (y-1)<width && cluesBoard[x-1][y-1] == '?'){
+				cluesBoard[x-1][y-1] = 'C';
+				stack.push(new int[]{x-1, y-1});
+			}
+			if ((x)>=0 && (x)<length && (y-1)>=0 && (y-1)<width && cluesBoard[x][y-1] == '?'){
+				cluesBoard[x][y-1] = 'C';
+				stack.push(new int[]{x, y-1});
+			}
+			if ((x+1)>=0 && (x+1)<length && (y-1)>=0 && (y-1)<width && cluesBoard[x+1][y-1] == '?'){
+				cluesBoard[x+1][y-1] = 'C';
+				stack.push(new int[]{x+1, y-1});
+			}
+			if ((x-1)>=0 && (x-1)<length && (y)>=0 && (y)<width && cluesBoard[x-1][y] == '?'){
+				cluesBoard[x-1][y] = 'C';
+				stack.push(new int[]{x-1, y});
+			}
+			if ((x+1)>=0 && (x+1)<length && (y)>=0 && (y)<width && cluesBoard[x+1][y] == '?'){
+				cluesBoard[x+1][y] = 'C';
+				stack.push(new int[]{x+1, y});
+			}
+			if ((x-1)>=0 && (x-1)<length && (y+1)>=0 && (y+1)<width && cluesBoard[x-1][y+1] == '?'){
+				cluesBoard[x-1][y+1] = 'C';
+				stack.push(new int[]{x-1, y+1});
+			}
+			if ((x)>=0 && (x)<length && (y+1)>=0 && (y+1)<width && cluesBoard[x][y+1] == '?'){
+				cluesBoard[x][y+1] = 'C';
+				stack.push(new int[]{x, y+1});
+			}
+			if ((x+1)>=0 && (x+1)<length && (y+1)>=0 && (y+1)<width && cluesBoard[x+1][y+1] == '?'){
+				cluesBoard[x+1][y+1] = 'C';
+				stack.push(new int[]{x+1, y+1});
+			}
 		}
 		if (clue == 9){
 			cluesBoard[x][y] = '*';
 		} else {
 			cluesBoard[x][y] = (char)(clue+48);
 		}
+		reduceAdjacentNumber(x,y);
 		boardChanged = true;
 	}
 	
@@ -109,14 +142,71 @@ public class Minesweeper{
 		for (int x=0; x<length; x++){
 			for (int y=0; y<width; y++){
 				if (cluesBoard[x][y] == (char)(adjacencyBoard[x][y] + adjacentMines[x][y] + 48)){
-					if ((x-1)>=0 && (x-1)<length && (y-1)>=0 && (y-1)<width && cluesBoard[x-1][y-1] == '?') flagMine(x-1,y-1);
-					if ((x)>=0 && (x)<length && (y-1)>=0 && (y-1)<width && cluesBoard[x][y-1] == '?') flagMine(x,y-1);
-					if ((x+1)>=0 && (x+1)<length && (y-1)>=0 && (y-1)<width && cluesBoard[x+1][y-1] == '?') flagMine(x+1,y-1);
-					if ((x-1)>=0 && (x-1)<length && (y)>=0 && (y)<width && cluesBoard[x-1][y] == '?') flagMine(x-1,y);
-					if ((x+1)>=0 && (x+1)<length && (y)>=0 && (y)<width && cluesBoard[x+1][y] == '?') flagMine(x+1,y);
-					if ((x-1)>=0 && (x-1)<length && (y+1)>=0 && (y+1)<width && cluesBoard[x-1][y+1] == '?') flagMine(x-1,y+1);
-					if ((x)>=0 && (x)<length && (y+1)>=0 && (y+1)<width && cluesBoard[x][y+1] == '?') flagMine(x,y+1);
-					if ((x+1)>=0 && (x+1)<length && (y+1)>=0 && (y+1)<width && cluesBoard[x+1][y+1] == '?') flagMine(x+1,y+1);
+					if ((x-1)>=0 && (x-1)<length && (y-1)>=0 && (y-1)<width && cluesBoard[x-1][y-1] == '?'){
+						flagMine(x-1,y-1);
+						reduceAdjacentNumber(x-1,y-1);
+					}
+					if ((x)>=0 && (x)<length && (y-1)>=0 && (y-1)<width && cluesBoard[x][y-1] == '?'){
+						flagMine(x,y-1);
+						reduceAdjacentNumber(x,y-1);
+					}
+					if ((x+1)>=0 && (x+1)<length && (y-1)>=0 && (y-1)<width && cluesBoard[x+1][y-1] == '?'){
+						flagMine(x+1,y-1);
+						reduceAdjacentNumber(x+1,y-1);
+					}
+					if ((x-1)>=0 && (x-1)<length && (y)>=0 && (y)<width && cluesBoard[x-1][y] == '?'){
+						flagMine(x-1,y);
+						reduceAdjacentNumber(x-1,y);
+					}
+					if ((x+1)>=0 && (x+1)<length && (y)>=0 && (y)<width && cluesBoard[x+1][y] == '?'){
+						flagMine(x+1,y);
+						reduceAdjacentNumber(x+1,y);
+					}
+					if ((x-1)>=0 && (x-1)<length && (y+1)>=0 && (y+1)<width && cluesBoard[x-1][y+1] == '?'){
+						flagMine(x-1,y+1);
+						reduceAdjacentNumber(x-1,y+1);
+					}
+					if ((x)>=0 && (x)<length && (y+1)>=0 && (y+1)<width && cluesBoard[x][y+1] == '?'){
+						flagMine(x,y+1);
+						reduceAdjacentNumber(x,y+1);
+					}
+					if ((x+1)>=0 && (x+1)<length && (y+1)>=0 && (y+1)<width && cluesBoard[x+1][y+1] == '?'){
+						flagMine(x+1,y+1);
+						reduceAdjacentNumber(x+1,y+1);
+					}
+				} else if (cluesBoard[x][y] == (char)(adjacentMines[x][y] + 48)){
+					if ((x-1)>=0 && (x-1)<length && (y-1)>=0 && (y-1)<width && cluesBoard[x-1][y-1] == '?'){
+						cluesBoard[x-1][y-1] = 'C';
+						stack.push(new int[]{x-1, y-1});
+					}
+					if ((x)>=0 && (x)<length && (y-1)>=0 && (y-1)<width && cluesBoard[x][y-1] == '?'){
+						cluesBoard[x][y-1] = 'C';
+						stack.push(new int[]{x, y-1});
+					}
+					if ((x+1)>=0 && (x+1)<length && (y-1)>=0 && (y-1)<width && cluesBoard[x+1][y-1] == '?'){
+						cluesBoard[x+1][y-1] = 'C';
+						stack.push(new int[]{x+1, y-1});
+					}
+					if ((x-1)>=0 && (x-1)<length && (y)>=0 && (y)<width && cluesBoard[x-1][y] == '?'){
+						cluesBoard[x-1][y] = 'C';
+						stack.push(new int[]{x-1, y});
+					}
+					if ((x+1)>=0 && (x+1)<length && (y)>=0 && (y)<width && cluesBoard[x+1][y] == '?'){
+						cluesBoard[x+1][y] = 'C';
+						stack.push(new int[]{x+1, y});
+					}
+					if ((x-1)>=0 && (x-1)<length && (y+1)>=0 && (y+1)<width && cluesBoard[x-1][y+1] == '?'){
+						cluesBoard[x-1][y+1] = 'C';
+						stack.push(new int[]{x-1, y+1});
+					}
+					if ((x)>=0 && (x)<length && (y+1)>=0 && (y+1)<width && cluesBoard[x][y+1] == '?'){
+						cluesBoard[x][y+1] = 'C';
+						stack.push(new int[]{x, y+1});
+					}
+					if ((x+1)>=0 && (x+1)<length && (y+1)>=0 && (y+1)<width && cluesBoard[x+1][y+1] == '?'){
+						cluesBoard[x+1][y+1] = 'C';
+						stack.push(new int[]{x+1, y+1});
+					}
 				}
 			}
 		}
@@ -126,36 +216,56 @@ public class Minesweeper{
 		cluesBoard[x][y] = 'M';
 		boardChanged=true;
 		if ((x-1)>=0 && (x-1)<length && (y-1)>=0 && (y-1)<width){
-			adjacencyBoard[x-1][y-1]--;
 			adjacentMines[x-1][y-1]++;
 		}
 		if ((x)>=0 && (x)<length && (y-1)>=0 && (y-1)<width){
-			adjacencyBoard[x][y-1]--;
 			adjacentMines[x][y-1]++;
 		}
 		if ((x+1)>=0 && (x+1)<length && (y-1)>=0 && (y-1)<width){
-			adjacencyBoard[x+1][y-1]--;
 			adjacentMines[x+1][y-1]++;
 		}
 		if ((x-1)>=0 && (x-1)<length && (y)>=0 && (y)<width){
-			adjacencyBoard[x-1][y]--;
 			adjacentMines[x-1][y]++;
 		}
 		if ((x+1)>=0 && (x+1)<length && (y)>=0 && (y)<width ){
-			adjacencyBoard[x+1][y]--;
 			adjacentMines[x+1][y]++;
 		}
 		if ((x-1)>=0 && (x-1)<length && (y+1)>=0 && (y+1)<width ){
-			adjacencyBoard[x-1][y+1]--;
 			adjacentMines[x-1][y+1]++;
 		}
 		if ((x)>=0 && (x)<length && (y+1)>=0 && (y+1)<width ){
-			adjacencyBoard[x][y+1]--;
 			adjacentMines[x][y+1]++;
 		}
 		if ((x+1)>=0 && (x+1)<length && (y+1)>=0 && (y+1)<width ){
-			adjacencyBoard[x+1][y+1]--;
 			adjacentMines[x+1][y+1]++;
+		}
+	}
+	
+	public static void reduceAdjacentNumber(int x, int y){ //flag x, y as mine
+		boardChanged = true;
+		if ((x-1)>=0 && (x-1)<length && (y-1)>=0 && (y-1)<width){
+			adjacencyBoard[x-1][y-1]--;
+		}
+		if ((x)>=0 && (x)<length && (y-1)>=0 && (y-1)<width){
+			adjacencyBoard[x][y-1]--;
+		}
+		if ((x+1)>=0 && (x+1)<length && (y-1)>=0 && (y-1)<width){
+			adjacencyBoard[x+1][y-1]--;
+		}
+		if ((x-1)>=0 && (x-1)<length && (y)>=0 && (y)<width){
+			adjacencyBoard[x-1][y]--;
+		}
+		if ((x+1)>=0 && (x+1)<length && (y)>=0 && (y)<width ){
+			adjacencyBoard[x+1][y]--;
+		}
+		if ((x-1)>=0 && (x-1)<length && (y+1)>=0 && (y+1)<width ){
+			adjacencyBoard[x-1][y+1]--;
+		}
+		if ((x)>=0 && (x)<length && (y+1)>=0 && (y+1)<width ){
+			adjacencyBoard[x][y+1]--;
+		}
+		if ((x+1)>=0 && (x+1)<length && (y+1)>=0 && (y+1)<width ){
+			adjacencyBoard[x+1][y+1]--;
 		}
 	}
 	
