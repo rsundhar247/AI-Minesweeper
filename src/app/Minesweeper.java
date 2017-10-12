@@ -19,8 +19,10 @@ import java.util.Scanner;
 public class Minesweeper{
 	
 	static int length, width;
-	static int[][] minesBoard;
+	static int[][] adjacencyBoard; //holds how many unknown adjacent cells
+	static int[][] adjacentMines; //holds how many marked mines in adjacent cells
 	static char[][] cluesBoard;
+	static boolean boardChanged = false;
 	
 	public static void main(String[] args){
 		System.out.println("Initializing Minesweeper...");
@@ -31,11 +33,13 @@ public class Minesweeper{
 		System.out.println("Enter width of board: ");
 		width = in.nextInt();
 		
-		minesBoard = createMines(length, width);
 		cluesBoard = createBoard(length, width);	
+		adjacencyBoard = countAdjacent(length, width);
+		adjacentMines = initAdjacentMines(length, width);
 		
 		int x = width/2 + 1;
-		int y = length/2 + 1;	
+		int y = length/2 + 1;
+		int[] XY = getXY(x, y);
 		
 		System.out.println("First move: " + x + ", " + y);
 		System.out.println("(x by y coordinates)");
@@ -45,16 +49,15 @@ public class Minesweeper{
 		printBoard(cluesBoard);
 		int state = in.nextInt();
 		
-
-		if (checkValidMove(x, y)){
-			minesBoard[length-y][x-1] = 0;
-			putClue(x, y, state);
-			//printBoard(minesBoard);
-			//printBoard(cluesBoard);
-		}
+		putClue(XY[0], XY[1], state);
+		printBoard(adjacencyBoard);
+		//printBoard(cluesBoard);
 		
 		while(checkGameInPlay()){
-			
+			while(boardChanged){
+				boardChanged = false;
+				expandClues();
+			}
 			printBoard(cluesBoard);
 			
 			int command = in.nextInt();
@@ -68,48 +71,107 @@ public class Minesweeper{
 		
 	}
 	
-	public static boolean checkValidMove(int input1, int input2){
-		if (input1>=1 && input1<=width && input2>=1 && input2<=length){
-			return true;
-		}
-		return false;
-	}
+//	public static boolean checkValidMove(int input1, int input2){
+//		if (input1>=1 && input1<=width && input2>=1 && input2<=length){
+//			return true;
+//		}
+//		return false;
+//	}
 	
-	public static void putClue(int input1, int input2, int clue){
-		int x = length-input2;
-		int y = input1-1;
-		
+	public static void putClue(int x, int y, int clue){
+		if (clue == 0){
+			cluesBoard[x][y] = '0';
+			if ((x-1)>=0 && (x-1)<length && (y-1)>=0 && (y-1)<width && cluesBoard[x-1][y-1] == '?') cluesBoard[x-1][y-1] = 'C';
+			if ((x)>=0 && (x)<length && (y-1)>=0 && (y-1)<width && cluesBoard[x][y-1] == '?') cluesBoard[x][y-1] = 'C';
+			if ((x+1)>=0 && (x+1)<length && (y-1)>=0 && (y-1)<width && cluesBoard[x+1][y-1] == '?') cluesBoard[x+1][y-1] = 'C';
+			if ((x-1)>=0 && (x-1)<length && (y)>=0 && (y)<width && cluesBoard[x-1][y] == '?') cluesBoard[x-1][y] = 'C';
+			if ((x+1)>=0 && (x+1)<length && (y)>=0 && (y)<width && cluesBoard[x+1][y] == '?') cluesBoard[x+1][y] = 'C';
+			if ((x-1)>=0 && (x-1)<length && (y+1)>=0 && (y+1)<width && cluesBoard[x-1][y+1] == '?') cluesBoard[x-1][y+1] = 'C';
+			if ((x)>=0 && (x)<length && (y+1)>=0 && (y+1)<width && cluesBoard[x][y+1] == '?') cluesBoard[x][y+1] = 'C';
+			if ((x+1)>=0 && (x+1)<length && (y+1)>=0 && (y+1)<width && cluesBoard[x+1][y+1] == '?') cluesBoard[x+1][y+1] = 'C';
+		}
 		if (clue == 9){
-			minesBoard[x][y] = 1;
 			cluesBoard[x][y] = '*';
 		} else {
-//			int count = 0;
-//			if ((x-1)>=0 && (x-1)<length && (y-1)>=0 && (y-1)<width) count = count + minesBoard[x-1][y-1];
-//			if ((x)>=0 && (x)<length && (y-1)>=0 && (y-1)<width) count = count + minesBoard[x][y-1];
-//			if ((x+1)>=0 && (x+1)<length && (y-1)>=0 && (y-1)<width) count = count + minesBoard[x+1][y-1];
-//			if ((x-1)>=0 && (x-1)<length && (y)>=0 && (y)<width) count = count + minesBoard[x-1][y];
-//			if ((x+1)>=0 && (x+1)<length && (y)>=0 && (y)<width) count = count + minesBoard[x+1][y];
-//			if ((x-1)>=0 && (x-1)<length && (y+1)>=0 && (y+1)<width) count = count + minesBoard[x-1][y+1];
-//			if ((x)>=0 && (x)<length && (y+1)>=0 && (y+1)<width) count = count + minesBoard[x][y+1];
-//			if ((x+1)>=0 && (x+1)<length && (y+1)>=0 && (y+1)<width) count = count + minesBoard[x+1][y+1];
-//			
-//			char clue = (char)(count+48);
-//			System.out.println(clue);
 			cluesBoard[x][y] = (char)(clue+48);
+		}
+		boardChanged = true;
+	}
+	
+	public static void expandClues(){
+		for (int x=0; x<length; x++){
+			for (int y=0; y<width; y++){
+				if (cluesBoard[x][y] == (char)(adjacencyBoard[x][y] + adjacentMines[x][y] + 48)){
+					if ((x-1)>=0 && (x-1)<length && (y-1)>=0 && (y-1)<width && cluesBoard[x-1][y-1] == '?') flagMine(x-1,y-1);
+					if ((x)>=0 && (x)<length && (y-1)>=0 && (y-1)<width && cluesBoard[x][y-1] == '?') flagMine(x,y-1);
+					if ((x+1)>=0 && (x+1)<length && (y-1)>=0 && (y-1)<width && cluesBoard[x+1][y-1] == '?') flagMine(x+1,y-1);
+					if ((x-1)>=0 && (x-1)<length && (y)>=0 && (y)<width && cluesBoard[x-1][y] == '?') flagMine(x-1,y);
+					if ((x+1)>=0 && (x+1)<length && (y)>=0 && (y)<width && cluesBoard[x+1][y] == '?') flagMine(x+1,y);
+					if ((x-1)>=0 && (x-1)<length && (y+1)>=0 && (y+1)<width && cluesBoard[x-1][y+1] == '?') flagMine(x-1,y+1);
+					if ((x)>=0 && (x)<length && (y+1)>=0 && (y+1)<width && cluesBoard[x][y+1] == '?') flagMine(x,y+1);
+					if ((x+1)>=0 && (x+1)<length && (y+1)>=0 && (y+1)<width && cluesBoard[x+1][y+1] == '?') flagMine(x+1,y+1);
+				}
+			}
 		}
 	}
 	
-	public static int[][] createMines(int length, int width){
-		int[][] newMines = new int[length][width];
-		for (int i=0; i<length; i++){
-			for (int j=0; j<width; j++){
-				newMines[i][j] = -1; //unknown
+	public static void flagMine(int x, int y){ //flag x, y as mine
+		cluesBoard[x][y] = 'M';
+		boardChanged=true;
+		if ((x-1)>=0 && (x-1)<length && (y-1)>=0 && (y-1)<width && isNumClue(cluesBoard[x-1][y-1])){
+			adjacencyBoard[x-1][y-1]--;
+			adjacentMines[x-1][y-1]++;
+		}
+		if ((x)>=0 && (x)<length && (y-1)>=0 && (y-1)<width && isNumClue(cluesBoard[x][y-1])){
+			adjacencyBoard[x][y-1]--;
+			adjacentMines[x][y-1]++;
+		}
+		if ((x+1)>=0 && (x+1)<length && (y-1)>=0 && (y-1)<width && isNumClue(cluesBoard[x+1][y+1])){
+			adjacencyBoard[x+1][y-1]--;
+			adjacentMines[x+1][y-1]++;
+		}
+		if ((x-1)>=0 && (x-1)<length && (y)>=0 && (y)<width && isNumClue(cluesBoard[x-1][y])){
+			adjacencyBoard[x-1][y]--;
+			adjacentMines[x-1][y]++;
+		}
+		if ((x+1)>=0 && (x+1)<length && (y)>=0 && (y)<width && isNumClue(cluesBoard[x+1][y])){
+			adjacencyBoard[x+1][y]--;
+			adjacentMines[x+1][y]++;
+		}
+		if ((x-1)>=0 && (x-1)<length && (y+1)>=0 && (y+1)<width && isNumClue(cluesBoard[x-1][y+1])){
+			adjacencyBoard[x-1][y+1]--;
+			adjacentMines[x-1][y+1]++;
+		}
+		if ((x)>=0 && (x)<length && (y+1)>=0 && (y+1)<width && isNumClue(cluesBoard[x][y+1])){
+			adjacencyBoard[x][y+1]--;
+			adjacentMines[x][y+1]++;
+		}
+		if ((x+1)>=0 && (x+1)<length && (y+1)>=0 && (y+1)<width && isNumClue(cluesBoard[x+1][y+1])){
+			adjacencyBoard[x+1][y+1]--;
+			adjacentMines[x+1][y+1]++;
+		}
+	}
+	
+	public static int[][] countAdjacent(int length, int width){ //counts the unknown adjacent cells
+		int[][] countAdjacent = new int[length][width];
+		for (int x=0; x<length; x++){
+			for (int y=0; y<width; y++){
+				int count = 0;
+				if ((x-1)>=0 && (x-1)<length && (y-1)>=0 && (y-1)<width && cluesBoard[x-1][y-1] == '?') count++;
+				if ((x)>=0 && (x)<length && (y-1)>=0 && (y-1)<width && cluesBoard[x][y-1] == '?') count++;
+				if ((x+1)>=0 && (x+1)<length && (y-1)>=0 && (y-1)<width && cluesBoard[x+1][y-1] == '?') count++;
+				if ((x-1)>=0 && (x-1)<length && (y)>=0 && (y)<width && cluesBoard[x-1][y] == '?') count++;
+				if ((x+1)>=0 && (x+1)<length && (y)>=0 && (y)<width && cluesBoard[x+1][y] == '?') count++;
+				if ((x-1)>=0 && (x-1)<length && (y+1)>=0 && (y+1)<width && cluesBoard[x-1][y+1] == '?') count++;
+				if ((x)>=0 && (x)<length && (y+1)>=0 && (y+1)<width && cluesBoard[x][y+1] == '?') count++;
+				if ((x+1)>=0 && (x+1)<length && (y+1)>=0 && (y+1)<width && cluesBoard[x+1][y+1] == '?') count++;
+				
+				countAdjacent[x][y] = count; //unknown
 			}
 		}
 		
-		return newMines;
+		return countAdjacent;
 	}
-	
 	
 	public static char[][] createBoard(int length, int width){
 		char[][] clues = new char[length][width];
@@ -119,6 +181,21 @@ public class Minesweeper{
 			}
 		}
 		return clues;
+	}
+	
+	public static int[][] initAdjacentMines(int length, int width){
+		int[][] mines = new int[length][width];
+		for (int i=0; i<length; i++){
+			for (int j=0; j<width; j++){
+				mines[i][j] = 0;
+			}
+		}
+		return mines;
+	}
+	public static int[] getXY(int input1, int input2){
+		int x = length-input2;
+		int y = input1-1;
+		return new int[]{x, y};
 	}
 	
 	public static void printBoard(char[][] board){
@@ -171,7 +248,6 @@ public class Minesweeper{
 		System.out.println();
 	}
 	
-	
 	public static boolean checkGameInPlay(){
 		boolean unsolved = false;
 		for (int i=0; i<cluesBoard.length; i++){
@@ -184,5 +260,9 @@ public class Minesweeper{
 		return false;
 	}
 	
+	public static boolean isNumClue(char c){
+		if (c=='0' || c=='1' || c=='2' || c=='3' || c=='4' || c=='5' || c=='6' || c=='7' || c=='8' || c=='9') return true;
+		return false;
+	}
 }
 
