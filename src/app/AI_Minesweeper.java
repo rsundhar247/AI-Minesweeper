@@ -25,20 +25,10 @@ public class AI_Minesweeper {
 		
 		probClue = new int[length][width][3][3]; // -1 - Unknown, 0 - Found/Safe, 1 - Mine
 		cluesFound = new boolean[length][width];
-		for(int[][][] temp: probClue) {
-			for(int[][] temp1:temp) {
-				for(int i=0;i<3;i++) {
-					for(int j=0;j<3;j++) {
-						if(!(i==1 && j==1))
-							temp1[i][j]=-1;
-						else
-							temp1[i][j]=-8;
-					}
-				}
-			}
-		}
 		
-		cluesBoard = createBoard(length, width);	
+		populateProbClue(length,width);
+		cluesBoard = createBoard(length, width);
+		expandProbClues();
 		
 		int x = width/2 + 1;
 		int y = length/2 + 1;
@@ -86,6 +76,32 @@ public class AI_Minesweeper {
 		
 	}
 	
+	public static void populateProbClue(int length, int width) {
+		for(int[][][] temp: probClue) {
+			for(int[][] temp1:temp) {
+				for(int i=0;i<3;i++) {
+					for(int j=0;j<3;j++) {
+							temp1[i][j]=-1;
+					}
+				}
+			}
+		}
+		
+		for(int i=0; i<width; i++) {
+			for(int j=0; j<3; j++) {
+				probClue[0][i][0][j]=0;
+				probClue[length-1][i][2][j]=0;
+			}
+		}
+		
+		for(int i=0; i<length; i++) {
+			for(int j=0; j<3; j++) {
+				probClue[i][0][j][0]=0;
+				probClue[i][width-1][j][2]=0;
+			}
+		}
+	}
+	
 	public static void putProbClue(int x, int y, int clue) {
 		
 		if (clue == 9){
@@ -118,7 +134,6 @@ public class AI_Minesweeper {
 			if (x+1<length && y>=0 && cluesBoard[x+1][y] == '?' && cluesFound[x+1][y]==false)	pushToQueue(x+1,y);
 			if (x+1<length && y+1<width && cluesBoard[x+1][y+1] == '?' && cluesFound[x+1][y+1]==false)	pushToQueue(x+1,y+1);
 		}
-		
 		expandProbClues();
 	}
 	
@@ -134,7 +149,7 @@ public class AI_Minesweeper {
 					int tempVal=0;
 					for(int i=0; i<3; i++) {
 						for(int j=0; j<3; j++) {
-							if(i!=j)
+							if(!(i==1 && j==1))
 								tempVal+=temp1[i][j];
 						}
 					}
@@ -148,7 +163,6 @@ public class AI_Minesweeper {
 	public static void neighbourClues() {
 		for(int i=0; i<length; i++) {
 			for(int j=0; j<width; j++) {
-				
 				if(cluesBoard[i][j] != '*' && cluesBoard[i][j] != '?'  && Math.abs(Character.getNumericValue(cluesBoard[i][j])) == (neighbourUnknowns(i, j)+neighbourMines(i,j))) {
 					if (i-1>=0 && j-1>=0 && cluesBoard[i-1][j-1] == '?')	flagMines(i-1,j-1);
 					if (i-1>=0 && j>=0 && cluesBoard[i-1][j] == '?')	flagMines(i-1,j);
@@ -204,6 +218,7 @@ public class AI_Minesweeper {
 	
 	public static void flagMines(int i, int j) {
 		cluesBoard[i][j] = '*';
+		System.out.println("Mine Found ::: Row-"+i+" Column-"+j);
 	}
 	
 	public static int[] nextRequestedXY(){
