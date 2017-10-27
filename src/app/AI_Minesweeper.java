@@ -1,5 +1,6 @@
 package app;
 
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Scanner;
@@ -9,7 +10,6 @@ public class AI_Minesweeper {
 	static int length, width;
 	static char[][] cluesBoard;
 	static boolean[][] cluesFound;
-	static boolean boardChanged = false;
 	static Queue<int[]> queue;
 	static int[][][][] probClue;
 	
@@ -26,9 +26,13 @@ public class AI_Minesweeper {
 		probClue = new int[length][width][3][3]; // -1 - Unknown, 0 - Found/Safe, 1 - Mine
 		cluesFound = new boolean[length][width];
 		
-		populateProbClue(length,width);
 		cluesBoard = createBoard(length, width);
-		expandProbClues();
+		populateProbClue(length,width);
+		
+		/*putProbClue(3, 0, 2);
+		putProbClue(3, 1, 4);
+		flagMines(4, 0);
+		putProbClue(4, 1, 2);*/
 		
 		int x = width/2 + 1;
 		int y = length/2 + 1;
@@ -37,19 +41,18 @@ public class AI_Minesweeper {
 		System.out.println("First move: " + x + ", " + y);
 		System.out.println("(Row,Col Coordinates)");
 		
-		System.out.println("Enter numeric state of specified cell: ");
+		System.out.println("Enter numeric state of specified cell 0-9: ");
 		System.out.println("(If mine, enter 9)");
 		printBoard(cluesBoard);
 		int state = in.nextInt();
 		
 		putProbClue(XY[0], XY[1], state);
-		//printBoard(cluesBoard);
 		
 		while(checkGameInPlay()){
-			while(boardChanged){
-				boardChanged = false;
-				expandProbClues();
-			}
+			expandProbClues();
+			neighbourClues();
+			neighbourExplore();
+			
 			System.out.println("Clues: ");
 			printBoard(cluesBoard);
 			
@@ -77,13 +80,20 @@ public class AI_Minesweeper {
 	}
 	
 	public static void populateProbClue(int length, int width) {
-		for(int[][][] temp: probClue) {
-			for(int[][] temp1:temp) {
+		for(int a=0; a<probClue.length; a++) {
+			for(int b=0; b<probClue[0].length; b++) {
 				for(int i=0;i<3;i++) {
 					for(int j=0;j<3;j++) {
-							temp1[i][j]=-1;
+							probClue[a][b][i][j]=-1;
 					}
 				}
+				int outBound=0;
+				if(a==0 || b==0 || a==probClue.length-1 || b==probClue[0].length-1) {
+					outBound=3;
+					if((a==0 && b==0) || (a==probClue.length-1 && b==probClue[0].length-1) || (a==0 && b==probClue[0].length-1) || (a==probClue.length-1 && b==0))
+						outBound=5;
+				}
+				probClue[a][b][1][1]=8-outBound;
 			}
 		}
 		
@@ -100,6 +110,7 @@ public class AI_Minesweeper {
 				probClue[i][width-1][j][2]=0;
 			}
 		}
+		expandProbClues();
 	}
 	
 	public static void putProbClue(int x, int y, int clue) {
@@ -112,19 +123,52 @@ public class AI_Minesweeper {
 		
 		probClue[x][y][1][1]=clue;
 		cluesFound[x][y]=true;
-		boardChanged = true;
 		
-		if (x-1>=0 && y-1>=0)	probClue[x-1][y-1][2][2]=0;
-		if (x-1>=0 && y>=0)	probClue[x-1][y][2][1]=0;
-		if (x-1>=0 && y+1<width)	probClue[x-1][y+1][2][0]=0;
-		if (x>=0 && y-1>=0)	probClue[x][y-1][1][2]=0;
-		if (x>=0 && y+1<width)	probClue[x][y+1][1][0]=0;
-		if (x+1<length && y-1>=0)	probClue[x+1][y-1][0][2]=0;
-		if (x+1<length && y>=0)	probClue[x+1][y][0][1]=0;
-		if (x+1<length && y+1<width)	probClue[x+1][y+1][0][0]=0;
+		if (x-1>=0 && y-1>=0) {
+			probClue[x-1][y-1][2][2]=0;
+			if(cluesBoard[x-1][y-1] == '?')
+				--probClue[x-1][y-1][1][1];
+		}
+		if (x-1>=0 && y>=0) {
+			probClue[x-1][y][2][1]=0;
+			if(cluesBoard[x-1][y] == '?')
+				--probClue[x-1][y][1][1];
+		}
+		if (x-1>=0 && y+1<width) {
+			probClue[x-1][y+1][2][0]=0;
+			if(cluesBoard[x-1][y+1] == '?')
+				--probClue[x-1][y+1][1][1];
+		}
+		if (x>=0 && y-1>=0) {
+			probClue[x][y-1][1][2]=0;
+			if(cluesBoard[x][y-1] == '?')
+				--probClue[x][y-1][1][1];
+		}
+		if (x>=0 && y+1<width) {
+			probClue[x][y+1][1][0]=0;
+			if(cluesBoard[x][y+1] == '?')
+				--probClue[x][y+1][1][1];
+		}
+		if (x+1<length && y-1>=0) {
+			probClue[x+1][y-1][0][2]=0;
+			if(cluesBoard[x+1][y-1] == '?')
+				--probClue[x+1][y-1][1][1];
+		}
+		if (x+1<length && y>=0) {
+			probClue[x+1][y][0][1]=0;
+			if(cluesBoard[x+1][y] == '?')
+				--probClue[x+1][y][1][1];
+		}
+		if (x+1<length && y+1<width) {
+			probClue[x+1][y+1][0][0]=0;
+			if(cluesBoard[x+1][y+1] == '?')
+				--probClue[x+1][y+1][1][1];
+		}
 		
 		
 		if(probClue[x][y][1][1] == 0) {
+			for (int[] row : probClue[x][y])
+			    Arrays.fill(row, 0);
 			if (x-1>=0 && y-1>=0 && cluesBoard[x-1][y-1] == '?' && cluesFound[x-1][y-1]==false)	pushToQueue(x-1,y-1);
 			if (x-1>=0 && y>=0 && cluesBoard[x-1][y] == '?' && cluesFound[x-1][y]==false)	pushToQueue(x-1,y);
 			if (x-1>=0 && y+1<width && cluesBoard[x-1][y+1] == '?' && cluesFound[x-1][y+1]==false)	pushToQueue(x-1,y+1);
@@ -135,6 +179,8 @@ public class AI_Minesweeper {
 			if (x+1<length && y+1<width && cluesBoard[x+1][y+1] == '?' && cluesFound[x+1][y+1]==false)	pushToQueue(x+1,y+1);
 		}
 		expandProbClues();
+		neighbourClues();
+		neighbourExplore();
 	}
 	
 	public static void pushToQueue(int x, int y) {
@@ -143,27 +189,30 @@ public class AI_Minesweeper {
 	}
 	
 	public static void expandProbClues() {
-		for(int[][][] temp:probClue) {
-			for(int[][] temp1: temp) {
-				if(temp1[1][1]!=0) {
-					int tempVal=0;
-					for(int i=0; i<3; i++) {
-						for(int j=0; j<3; j++) {
-							if(!(i==1 && j==1))
-								tempVal+=temp1[i][j];
-						}
+		for(int a=0;a<probClue.length;a++) {
+			for(int b=0;b<probClue[0].length;b++) {
+				int tempVal=0;
+				for(int i=0; i<3; i++) {
+					for(int j=0; j<3; j++) {
+						if(!(i==1 && j==1))
+							tempVal+=probClue[a][b][i][j];
 					}
-					temp1[1][1]=tempVal;
+				}
+				if(cluesBoard[a][b]=='*') {
+					probClue[a][b][1][1]=0;
+				} else if(cluesBoard[a][b]=='?') {
+					probClue[a][b][1][1]=Math.abs(tempVal);
+				} else if(cluesBoard[a][b]!='*' && cluesBoard[a][b]!='?') {
+					probClue[a][b][1][1]=Character.getNumericValue(cluesBoard[a][b])-neighbourMines(a, b);
 				}
 			}
 		}
-		neighbourClues();
 	}
 	
 	public static void neighbourClues() {
 		for(int i=0; i<length; i++) {
 			for(int j=0; j<width; j++) {
-				if(cluesBoard[i][j] != '*' && cluesBoard[i][j] != '?'  && Math.abs(Character.getNumericValue(cluesBoard[i][j])) == (neighbourUnknowns(i, j)+neighbourMines(i,j))) {
+				if(cluesBoard[i][j] != '*' && cluesBoard[i][j] != '?'  && (Character.getNumericValue(cluesBoard[i][j])-neighbourMines(i,j)) == neighbourUnknowns(i, j)) {
 					if (i-1>=0 && j-1>=0 && cluesBoard[i-1][j-1] == '?')	flagMines(i-1,j-1);
 					if (i-1>=0 && j>=0 && cluesBoard[i-1][j] == '?')	flagMines(i-1,j);
 					if (i-1>=0 && j+1<width && cluesBoard[i-1][j+1] == '?')	flagMines(i-1,j+1);
@@ -174,7 +223,7 @@ public class AI_Minesweeper {
 					if (i+1<length && j+1<width && cluesBoard[i+1][j+1] == '?')	flagMines(i+1,j+1);
 				}
 				
-				if(cluesBoard[i][j] != '*' && cluesBoard[i][j] != '?'  && Math.abs(Character.getNumericValue(cluesBoard[i][j])) == neighbourMines(i,j)) {
+				if(cluesBoard[i][j] != '*' && cluesBoard[i][j] != '?'  && (Character.getNumericValue(cluesBoard[i][j])-neighbourMines(i,j)) == 0) {
 					if (i-1>=0 && j-1>=0 && cluesBoard[i-1][j-1] == '?' && cluesFound[i-1][j-1]==false)	pushToQueue(i-1,j-1);
 					if (i-1>=0 && j>=0 && cluesBoard[i-1][j] == '?' && cluesFound[i-1][j]==false)	pushToQueue(i-1,j);
 					if (i-1>=0 && j+1<width && cluesBoard[i-1][j+1] == '?' && cluesFound[i-1][j+1]==false)	pushToQueue(i-1,j+1);
@@ -183,6 +232,98 @@ public class AI_Minesweeper {
 					if (i+1<length && j-1>=0 && cluesBoard[i+1][j-1] == '?' && cluesFound[i+1][j-1]==false)	pushToQueue(i+1,j-1);
 					if (i+1<length && j>=0 && cluesBoard[i+1][j] == '?' && cluesFound[i+1][j]==false)	pushToQueue(i+1,j);
 					if (i+1<length && j+1<width && cluesBoard[i+1][j+1] == '?' && cluesFound[i+1][j+1]==false)	pushToQueue(i+1,j+1);
+				}
+			}
+		}
+	}
+	
+	public static void neighbourExplore() {
+		
+		for(int i=0; i<probClue.length; i++) {
+			for(int j=0; j<probClue[0].length; j++) {
+				if(cluesBoard[i][j] != '?' && cluesBoard[i][j] != '0' && cluesBoard[i][j] != '*') {
+					int[][] leftTop = null, centreTop = null, rightTop = null, leftCentre = null, centre = null, rightCentre = null, leftBot = null, centreBot = null, rightBot = null;
+					
+					if (i-1>=0 && j-1>=0 && cluesBoard[i-1][j-1] != '?')	leftTop=copy2DArray(probClue[i-1][j-1]);
+					if (i-1>=0 && j>=0 && cluesBoard[i-1][j] != '?')	centreTop=copy2DArray(probClue[i-1][j]);
+					if (i-1>=0 && j+1<width && cluesBoard[i-1][j+1] != '?')	rightTop=copy2DArray(probClue[i-1][j+1]);
+					if (i>=0 && j-1>=0 && cluesBoard[i][j-1] != '?')	leftCentre=copy2DArray(probClue[i][j-1]);
+					centre=copy2DArray(probClue[i][j]);
+					if (i>=0 && j+1<width && cluesBoard[i][j+1] != '?')	rightCentre=copy2DArray(probClue[i][j+1]);
+					if (i+1<length && j-1>=0 && cluesBoard[i+1][j-1] != '?')	leftBot=copy2DArray(probClue[i+1][j-1]);
+					if (i+1<length && j>=0 && cluesBoard[i+1][j] != '?')	centreBot=copy2DArray(probClue[i+1][j]);
+					if (i+1<length && j+1<width && cluesBoard[i+1][j+1] != '?')	rightBot=copy2DArray(probClue[i+1][j+1]);
+
+					if(leftTop!=null) {
+						centre[0][1]-=leftTop[1][2];
+						centre[1][0]-=leftTop[2][1];
+						centre[1][1]-=leftTop[1][1];
+					}
+					if(rightTop!=null) {
+						centre[0][1]-=rightTop[1][0];
+						centre[1][2]-=rightTop[2][1];
+						centre[1][1]-=rightTop[1][1];
+					}
+					if(leftBot!=null) {
+						centre[1][0]-=leftBot[0][1];
+						centre[2][1]-=leftBot[1][2];
+						centre[1][1]-=leftBot[1][1];
+					}
+					if(rightBot!=null) {
+						centre[1][2]-=rightBot[0][1];
+						centre[2][1]-=rightBot[1][0];
+						centre[1][1]-=rightBot[1][1];
+					}
+					if(centreTop!=null) {
+						for(int a=0; a<2; a++) {
+							for(int b=0; b<3; b=b+2) {
+								centre[a][b]-=centreTop[a+1][b];
+							}
+						}
+						centre[1][1]-=centreTop[1][1];
+					}
+					if(leftCentre!=null) {
+						for(int a=0; a<3; a=a+2) {
+							for(int b=0; b<2; b++) {
+								centre[a][b]-=leftCentre[a][b+1];
+							}
+						}
+						centre[1][1]-=leftCentre[1][1];
+					}
+					if(rightCentre!=null) {
+						for(int a=0; a<3; a=a+2) {
+							for(int b=1; b<3; b++) {
+								centre[a][b]-=rightCentre[a][b-1];
+							}
+						}
+						centre[1][1]-=rightCentre[1][1];
+					}
+					if(centreBot!=null) {
+						for(int a=1; a<3; a++) {
+							for(int b=0; b<3; b=b+2) {
+								centre[a][b]-=centreBot[a-1][b];
+							}
+						}
+						centre[1][1]-=centreBot[1][1];
+					}
+					
+
+					int count=0;
+					for(int x=0;x<3;x++) {
+						for(int y=0;y<3;y++) {
+							if(!(x==1 && y==1) && centre[x][y]==-1)	count++;
+						}
+					}
+					if(centre[1][1] == count) {
+						for(int x=0;x<3;x++) {
+							for(int y=0;y<3;y++) {
+								if(centre[x][y]==-1) {
+									flagMines(i-1+x, j-1+y);
+								}
+							}
+						}
+					}
+					
 				}
 			}
 		}
@@ -218,7 +359,45 @@ public class AI_Minesweeper {
 	
 	public static void flagMines(int i, int j) {
 		cluesBoard[i][j] = '*';
-		System.out.println("Mine Found ::: Row-"+i+" Column-"+j);
+		for (int[] row : probClue[i][j])
+		    Arrays.fill(row, 0);
+		
+		System.out.println("Mine Found at ::: Row-"+i+" Column-"+j);
+		
+		if (i-1>=0 && j-1>=0) {
+			probClue[i-1][j-1][2][2]=0;
+			--probClue[i-1][j-1][1][1];
+		}
+		if (i-1>=0 && j>=0) {
+			probClue[i-1][j][2][1]=0;
+			--probClue[i-1][j][1][1];
+		}
+		if (i-1>=0 && j+1<width) {
+			probClue[i-1][j+1][2][0]=0;
+			--probClue[i-1][j+1][1][1];
+		}
+		if (i>=0 && j-1>=0) {
+			probClue[i][j-1][1][2]=0;
+			--probClue[i][j-1][1][1];
+		}
+		if (i>=0 && j+1<width) {
+			probClue[i][j+1][1][0]=0;
+			--probClue[i][j+1][1][1];
+		}
+		if (i+1<length && j-1>=0) {
+			probClue[i+1][j-1][0][2]=0;
+			--probClue[i+1][j-1][1][1];
+		}
+		if (i+1<length && j>=0) {
+			probClue[i+1][j][0][1]=0;
+			--probClue[i+1][j][1][1];
+		}
+		if (i+1<length && j+1<width) {
+			probClue[i+1][j+1][0][0]=0;
+			--probClue[i+1][j+1][1][1];
+		}
+		
+		expandProbClues();
 	}
 	
 	public static int[] nextRequestedXY(){
@@ -293,5 +472,13 @@ public class AI_Minesweeper {
 		return false;
 	}
 
-
+	public static int[][] copy2DArray(int[][] inputArr) {
+		int[][] copyArr = new int[inputArr.length][inputArr[0].length];
+		for(int i=0;i<inputArr.length;i++) {
+			for(int j=0;j<inputArr[0].length;j++) {
+				copyArr[i][j]=inputArr[i][j];
+			}
+		}
+		return copyArr;
+	}
 }
