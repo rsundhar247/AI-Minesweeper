@@ -1,3 +1,21 @@
+/*
+================================================================================================================
+Project - Minesweeper
+
+Class for Part 1 of Minesweeper Assignment; 
+Run to begin Minesweeper solver. First enter vertical length of board, followed by horizontal width of the board.
+Program will query for moves in the form of X, Y. X corresponds to horizontal position, Y corresponds to vertical
+position. Numerical labels along the top and left side of the output indicate position.   
+
+Legend:
+? - uncovered cell
+M - cell marked as mine
+C - cell marked as clear
+1 - searched cell, numeric indicates how many adjacent mines
+* - searched cell, indicates hit mine, game over
+================================================================================================================
+*/
+
 package app;
 
 import java.util.Arrays;
@@ -8,10 +26,10 @@ import java.util.Scanner;
 public class AI_Minesweeper {
 	
 	static int length, width;
-	static char[][] cluesBoard;
+	static char[][] cluesBoard; //holds the clues queried from the user, board that is printed
 	static boolean[][] cluesFound;
 	static Queue<int[]> queue;
-	static int[][][][] probClue;
+	static int[][][][] probClue; //our knowledge base: at index [a][b][c][d], holds the local clues on position [c][d] from the clue in [a][b]
 	
 	public static void main(String[] args){
 		System.out.println("Initializing Minesweeper...");
@@ -48,7 +66,7 @@ public class AI_Minesweeper {
 		
 		putProbClue(XY[0], XY[1], state);
 		
-		while(checkGameInPlay()){
+		while(checkGameInPlay()){	//loop while in play
 			expandProbClues();
 			neighbourClues();
 			neighbourExplore();
@@ -79,6 +97,9 @@ public class AI_Minesweeper {
 		
 	}
 	
+	/*
+	 * 
+	 */
 	public static void populateProbClue(int length, int width) {
 		for(int a=0; a<probClue.length; a++) {
 			for(int b=0; b<probClue[0].length; b++) {
@@ -113,6 +134,9 @@ public class AI_Minesweeper {
 		expandProbClues();
 	}
 	
+	/*
+	 * Function to place clue in clueBoard, and add clue to our knowledge base.
+	 */
 	public static void putProbClue(int x, int y, int clue) {
 		
 		if (clue == 9){
@@ -183,11 +207,17 @@ public class AI_Minesweeper {
 		neighbourExplore();
 	}
 	
+	/*
+	 * Add a cell to the queue to be queried, marked as queried.
+	 */
 	public static void pushToQueue(int x, int y) {
 		queue.add(new int[]{x, y});
 		cluesFound[x][y]=true;
 	}
 	
+	/*
+	 * 
+	 */
 	public static void expandProbClues() {
 		for(int a=0;a<probClue.length;a++) {
 			for(int b=0;b<probClue[0].length;b++) {
@@ -209,6 +239,10 @@ public class AI_Minesweeper {
 		}
 	}
 	
+	/*
+	 * Function to Automatically flag adjacent cells as mines if number of adjacent mines equals number of adjacent unknown cells,
+	 * also marks adjacent cells as clear if all adjacent mines are already found.
+	 */
 	public static void neighbourClues() {
 		for(int i=0; i<length; i++) {
 			for(int j=0; j<width; j++) {
@@ -237,6 +271,9 @@ public class AI_Minesweeper {
 		}
 	}
 	
+	/*
+	 * Function to explore related knowledge base facts in probClue and mark known mines as mine.
+	 */
 	public static void neighbourExplore() {
 		
 		for(int i=0; i<probClue.length; i++) {
@@ -329,6 +366,9 @@ public class AI_Minesweeper {
 		}
 	}
 	
+	/*
+	 * Function to count the number of adjacent unknown cells.
+	 */
 	public static int neighbourUnknowns(int x, int y) {
 		int neighourUnknowns=0;
 		if (x-1>=0 && y-1>=0 && cluesBoard[x-1][y-1] == '?')	++neighourUnknowns;
@@ -343,6 +383,9 @@ public class AI_Minesweeper {
 		return neighourUnknowns;
 	}
 	
+	/*
+	 * Function to count the number of adjacent mines.
+	 */
 	public static int neighbourMines(int x, int y) {
 		int neighbourMines=0;
 		if (x-1>=0 && y-1>=0 && cluesBoard[x-1][y-1] == '*')	++neighbourMines;
@@ -357,6 +400,9 @@ public class AI_Minesweeper {
 		return neighbourMines;
 	}
 	
+	/*
+	 * Flags a cell as containing a mine. Updates the adjacent mines count in adjacentMines.
+	 */
 	public static void flagMines(int i, int j) {
 		cluesBoard[i][j] = '*';
 		for (int[] row : probClue[i][j])
@@ -400,6 +446,9 @@ public class AI_Minesweeper {
 		expandProbClues();
 	}
 	
+	/*
+	 * Function to grab the next Cell to query.
+	 */
 	public static int[] nextRequestedXY(){
 		int[] XY = new int[2];
 		int x, y;
@@ -412,6 +461,9 @@ public class AI_Minesweeper {
 		return XY;
 	}
 	
+	/*
+	 * Function to initialize cluesBoard
+	 */
 	public static char[][] createBoard(int length, int width){
 		char[][] clues = new char[length][width];
 		for (int i=0; i<length; i++){
@@ -422,18 +474,27 @@ public class AI_Minesweeper {
 		return clues;
 	}
 	
+	/*
+	 * Function to convert input into appropriate array indices.
+	 */
 	public static int[] getXY(int input1, int input2){
 		int x = input1-1;
 		int y = input2-1;
 		return new int[]{x, y};
 	}
 	
+	/*
+	 * Function to convert array indices to board coordinates.
+	 */
 	public static int[] getCoordinate(int x, int y){
 		int input1 = x+1;
 		int input2 = y+1;
 		return new int[]{input1, input2};
 	}
 	
+	/*
+	 * Function to print cluesBoard
+	 */
 	public static void printBoard(char[][] board){
 		if (board == null){
 			return;
@@ -458,6 +519,9 @@ public class AI_Minesweeper {
 		System.out.println();
 	}
 	
+	/*
+	 * Function to determine if game is in play by detecting mines (*) on the board, or if there are any more unsearched (?) cells
+	 */
 	public static boolean checkGameInPlay(){
 		for (int i=0; i<cluesBoard.length; i++){
 			for (int j=0; j<cluesBoard[0].length; j++){
@@ -467,11 +531,17 @@ public class AI_Minesweeper {
 		return false;
 	}
 	
+	/*
+	 * Function to determine if char is numeric. Used to read clues.
+	 */
 	public static boolean isNumClue(char c){
 		if (c=='0' || c=='1' || c=='2' || c=='3' || c=='4' || c=='5' || c=='6' || c=='7' || c=='8' || c=='9') return true;
 		return false;
 	}
 
+	/*
+	 * Function to create a copy of a 2D array.
+	 */
 	public static int[][] copy2DArray(int[][] inputArr) {
 		int[][] copyArr = new int[inputArr.length][inputArr[0].length];
 		for(int i=0;i<inputArr.length;i++) {
