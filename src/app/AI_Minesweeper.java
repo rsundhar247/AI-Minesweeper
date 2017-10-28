@@ -105,7 +105,7 @@ public class AI_Minesweeper {
 	}
 	
 	/*
-	 * 
+	 * Initially populates the probClue 4D array based on the position of a particular cell in the board
 	 */
 	public static void populateProbClue(int length, int width) {
 		for(int a=0; a<probClue.length; a++) {
@@ -117,9 +117,9 @@ public class AI_Minesweeper {
 				}
 				int outBound=0;
 				if(a==0 || b==0 || a==probClue.length-1 || b==probClue[0].length-1) {
-					outBound=3;
+					outBound=3; // Cells at the corner (1,1) (1,n) (n,1) (n,n) have only 3 surrounding cells
 					if((a==0 && b==0) || (a==probClue.length-1 && b==probClue[0].length-1) || (a==0 && b==probClue[0].length-1) || (a==probClue.length-1 && b==0))
-						outBound=5;
+						outBound=5; //cells at the edges (1,2( (2,1) etc. have only 5 surrounding cells
 				}
 				probClue[a][b][1][1]=8-outBound;
 			}
@@ -142,7 +142,8 @@ public class AI_Minesweeper {
 	}
 	
 	/*
-	 * Function to place clue in clueBoard, and add clue to our knowledge base.
+	 * Function to place the clue in clueBoard, and add clue to our knowledge base. 
+	 * Updates probClue for (x,y) cell and also the surrounding cells knowledge of this particular cell.
 	 */
 	public static void putProbClue(int x, int y, int clue) {
 		
@@ -158,7 +159,7 @@ public class AI_Minesweeper {
 		if (x-1>=0 && y-1>=0) {
 			probClue[x-1][y-1][2][2]=0;
 			if(cluesBoard[x-1][y-1] == '?')
-				--probClue[x-1][y-1][1][1];
+				--probClue[x-1][y-1][1][1]; //when there is a safe cell found at (3,3), the number of unknown cells at (2,2) reduces by 1
 		}
 		if (x-1>=0 && y>=0) {
 			probClue[x-1][y][2][1]=0;
@@ -198,10 +199,12 @@ public class AI_Minesweeper {
 		
 		
 		if(probClue[x][y][1][1] == 0) {
-			for (int[] row : probClue[x][y])
+			for (int[] row : probClue[x][y]) {
 			    Arrays.fill(row, 0);
+			}
+			
 			if (x-1>=0 && y-1>=0 && cluesBoard[x-1][y-1] == '?' && cluesFound[x-1][y-1]==false) {
-				pushToQueue(x-1,y-1);
+				pushToQueue(x-1,y-1); // when the cell value of (i,j) is 0, all the surrounding cells are all safe.
 				treeOfInfluence.put(constructString(x-1+1, y-1+1),constructString(x+1, y+1));
 			}
 			if (x-1>=0 && y>=0 && cluesBoard[x-1][y] == '?' && cluesFound[x-1][y]==false) {
@@ -247,7 +250,7 @@ public class AI_Minesweeper {
 	}
 	
 	/*
-	 * 
+	 *  Recounts the number of unknown adjacent cell for each (a,b) and updates it in (a,b,1,1)
 	 */
 	public static void expandProbClues() {
 		for(int a=0;a<probClue.length;a++) {
@@ -352,6 +355,7 @@ public class AI_Minesweeper {
 	
 	/*
 	 * Function to explore related knowledge base facts in probClue and mark known mines as mine.
+	 * This function manipulates the knowledge base by finding the difference between one cell's KB and another
 	 */
 	public static void neighbourExplore() {
 		
@@ -488,7 +492,7 @@ public class AI_Minesweeper {
 		for (int[] row : probClue[i][j])
 		    Arrays.fill(row, 0);
 		
-		System.out.println("Mine Found at ::: Row-"+i+" Column-"+j);
+		System.out.println("Mine Found at ::: Row-"+(i+1)+" Column-"+(j+1));
 		
 		if (i-1>=0 && j-1>=0) {
 			probClue[i-1][j-1][2][2]=0;
@@ -632,10 +636,16 @@ public class AI_Minesweeper {
 		return copyArr;
 	}
 	
+	/*
+	 * Function to convert (i,j) into a string
+	 */
 	public static String constructString(int i, int j) {
 		return i+"-"+j;
 	}
 	
+	/*
+	 * Function to print the chain of influence knowledge Base
+	 */
 	public static void printHashMap(LinkedHashMap<String,String> map) {
 		System.out.println();
 		System.out.println("Child   ->   Parent");
@@ -643,5 +653,6 @@ public class AI_Minesweeper {
 		for(String key:map.keySet()) {
 			System.out.println(key+"     ->  "+map.get(key));
 		}
+		System.out.println();
 	}
 }
