@@ -1,24 +1,25 @@
 /*
-================================================================================================================
+==================================================================================================================
 Project - Minesweeper
 
-Class for Part 1 of Minesweeper Assignment; 
-Run to begin Minesweeper solver. First enter vertical length of board, followed by horizontal width of the board.
+This AI program solves a minesweeper game. It queries the user for a cell and based on the input from the user it
+builds a knowledge base and take further decisions.
+
+Run to begin Minesweeper solver. First enter vertical length of the board, followed by horizontal width of the board.
 Program will query for moves in the form of X, Y. X corresponds to horizontal position, Y corresponds to vertical
 position. Numerical labels along the top and left side of the output indicate position.   
 
 Legend:
 ? - uncovered cell
-M - cell marked as mine
-C - cell marked as clear
-1 - searched cell, numeric indicates how many adjacent mines
-* - searched cell, indicates hit mine, game over
-================================================================================================================
+* - cell marked as mine
+1-8 - searched cell, numeric indicates how many adjacent mines
+==================================================================================================================
 */
 
 package app;
 
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Scanner;
@@ -29,7 +30,8 @@ public class AI_Minesweeper {
 	static char[][] cluesBoard; //holds the clues queried from the user, board that is printed
 	static boolean[][] cluesFound;
 	static Queue<int[]> queue;
-	static int[][][][] probClue; //our knowledge base: at index [a][b][c][d], holds the local clues on position [c][d] from the clue in [a][b]
+	static int[][][][] probClue; //our knowledge base: at index [a][b][c][d], holds the local adjacent cell clues on position [c][d] from the clue in [a][b]
+	static LinkedHashMap<String,String> treeOfInfluence=new LinkedHashMap<String,String>();
 	
 	public static void main(String[] args){
 		System.out.println("Initializing Minesweeper...");
@@ -41,60 +43,65 @@ public class AI_Minesweeper {
 		System.out.println("Enter width of board: ");
 		width = in.nextInt();
 		
-		probClue = new int[length][width][3][3]; // -1 - Unknown, 0 - Found/Safe, 1 - Mine
+		probClue = new int[length][width][3][3]; // -1 - Unknown, 0 - Found/Safe
 		cluesFound = new boolean[length][width];
 		
 		cluesBoard = createBoard(length, width);
-		populateProbClue(length,width);
-		
-		/*putProbClue(3, 0, 2);
-		putProbClue(3, 1, 4);
-		flagMines(4, 0);
-		putProbClue(4, 1, 2);*/
+		populateProbClue(length,width); // builds the initial knowledge base of the board in a 4D array
 		
 		int x = width/2 + 1;
 		int y = length/2 + 1;
 		int[] XY = getXY(x, y);
 		
-		System.out.println("First move: " + x + ", " + y);
-		System.out.println("(Row,Col Coordinates)");
+		System.out.println("First move (Row,Col) : (" + x + "," + y+")");
+		
+		treeOfInfluence.put(constructString(x, y),"Random query to User");
 		
 		System.out.println("Enter numeric state of specified cell 0-9: ");
 		System.out.println("(If mine, enter 9)");
 		printBoard(cluesBoard);
 		int state = in.nextInt();
 		
-		putProbClue(XY[0], XY[1], state);
+		putProbClue(XY[0], XY[1], state); // Enters the clue into the knowledge base and updates the surrounding local cells
 		
 		while(checkGameInPlay()){	//loop while in play
-			expandProbClues();
-			neighbourClues();
-			neighbourExplore();
+			expandProbClues(); // keeps track of the number of local surrounding unknown cells in 4D array
+			neighbourClues(); // marks cells either mine or safe if there are any
+			neighbourExplore(); // manipulates the knowledge base with the local surrounding to find mine if any possible
 			
 			System.out.println("Clues: ");
 			printBoard(cluesBoard);
-			
+			boolean userInput=false;
 			int[] nextXY;
 			if (!queue.isEmpty()){
 				nextXY = queue.remove();
 			} else {
 				nextXY = nextRequestedXY();
+				userInput=true;
 			}
 			int[]next = getCoordinate(nextXY[0], nextXY[1]);
 			System.out.println("Enter state of next move: " + next[0] + ", " + next[1]);
+			if(userInput)
+				treeOfInfluence.put(constructString(next[0], next[1]),"Random query to User"); // Constructs the chain of influencce in the form of (child,parent)
+			
 			int command = in.nextInt();
 			if(command == 9) {
 				break;
-				
 			}
 			putProbClue(nextXY[0], nextXY[1], command);
 			
 		}
 		
-		System.out.println("Game Over. Final board: ");
+		System.out.println("################# Game Over. Final board: #################");
 		printBoard(cluesBoard);
-		in.close();
 		
+		System.out.println("Do you want to view the Chain of Influence? Y/N");
+		String option=in.next();
+		if(option.equals("Y") || option.equals("y")) {
+				printHashMap(treeOfInfluence);
+		}
+		
+		in.close();
 	}
 	
 	/*
@@ -193,14 +200,38 @@ public class AI_Minesweeper {
 		if(probClue[x][y][1][1] == 0) {
 			for (int[] row : probClue[x][y])
 			    Arrays.fill(row, 0);
-			if (x-1>=0 && y-1>=0 && cluesBoard[x-1][y-1] == '?' && cluesFound[x-1][y-1]==false)	pushToQueue(x-1,y-1);
-			if (x-1>=0 && y>=0 && cluesBoard[x-1][y] == '?' && cluesFound[x-1][y]==false)	pushToQueue(x-1,y);
-			if (x-1>=0 && y+1<width && cluesBoard[x-1][y+1] == '?' && cluesFound[x-1][y+1]==false)	pushToQueue(x-1,y+1);
-			if (x>=0 && y-1>=0 && cluesBoard[x][y-1] == '?' && cluesFound[x][y-1]==false)	pushToQueue(x,y-1);
-			if (x>=0 && y+1<width && cluesBoard[x][y+1] == '?' && cluesFound[x][y+1]==false)	pushToQueue(x,y+1);
-			if (x+1<length && y-1>=0 && cluesBoard[x+1][y-1] == '?' && cluesFound[x+1][y-1]==false)	pushToQueue(x+1,y-1);
-			if (x+1<length && y>=0 && cluesBoard[x+1][y] == '?' && cluesFound[x+1][y]==false)	pushToQueue(x+1,y);
-			if (x+1<length && y+1<width && cluesBoard[x+1][y+1] == '?' && cluesFound[x+1][y+1]==false)	pushToQueue(x+1,y+1);
+			if (x-1>=0 && y-1>=0 && cluesBoard[x-1][y-1] == '?' && cluesFound[x-1][y-1]==false) {
+				pushToQueue(x-1,y-1);
+				treeOfInfluence.put(constructString(x-1+1, y-1+1),constructString(x+1, y+1));
+			}
+			if (x-1>=0 && y>=0 && cluesBoard[x-1][y] == '?' && cluesFound[x-1][y]==false) {
+				pushToQueue(x-1,y);
+				treeOfInfluence.put(constructString(x-1+1, y+1),constructString(x+1, y+1));
+			}
+			if (x-1>=0 && y+1<width && cluesBoard[x-1][y+1] == '?' && cluesFound[x-1][y+1]==false) {
+				pushToQueue(x-1,y+1);
+				treeOfInfluence.put(constructString(x-1+1, y+1+1),constructString(x+1, y+1));
+			}
+			if (x>=0 && y-1>=0 && cluesBoard[x][y-1] == '?' && cluesFound[x][y-1]==false) {
+				pushToQueue(x,y-1);
+				treeOfInfluence.put(constructString(x+1, y-1+1),constructString(x+1, y+1));
+			}
+			if (x>=0 && y+1<width && cluesBoard[x][y+1] == '?' && cluesFound[x][y+1]==false) {
+				pushToQueue(x,y+1);
+				treeOfInfluence.put(constructString(x+1, y+1+1),constructString(x+1, y+1));
+			}
+			if (x+1<length && y-1>=0 && cluesBoard[x+1][y-1] == '?' && cluesFound[x+1][y-1]==false) {
+				pushToQueue(x+1,y-1);
+				treeOfInfluence.put(constructString(x+1+1, y-1+1),constructString(x+1, y+1));
+			}
+			if (x+1<length && y>=0 && cluesBoard[x+1][y] == '?' && cluesFound[x+1][y]==false) {
+				pushToQueue(x+1,y);
+				treeOfInfluence.put(constructString(x+1+1, y+1),constructString(x+1, y+1));
+			}
+			if (x+1<length && y+1<width && cluesBoard[x+1][y+1] == '?' && cluesFound[x+1][y+1]==false) {
+				pushToQueue(x+1,y+1);
+				treeOfInfluence.put(constructString(x+1+1, y+1+1),constructString(x+1, y+1));
+			}
 		}
 		expandProbClues();
 		neighbourClues();
@@ -247,25 +278,73 @@ public class AI_Minesweeper {
 		for(int i=0; i<length; i++) {
 			for(int j=0; j<width; j++) {
 				if(cluesBoard[i][j] != '*' && cluesBoard[i][j] != '?'  && (Character.getNumericValue(cluesBoard[i][j])-neighbourMines(i,j)) == neighbourUnknowns(i, j)) {
-					if (i-1>=0 && j-1>=0 && cluesBoard[i-1][j-1] == '?')	flagMines(i-1,j-1);
-					if (i-1>=0 && j>=0 && cluesBoard[i-1][j] == '?')	flagMines(i-1,j);
-					if (i-1>=0 && j+1<width && cluesBoard[i-1][j+1] == '?')	flagMines(i-1,j+1);
-					if (i>=0 && j-1>=0 && cluesBoard[i][j-1] == '?')	flagMines(i,j-1);
-					if (i>=0 && j+1<width && cluesBoard[i][j+1] == '?')	flagMines(i,j+1);
-					if (i+1<length && j-1>=0 && cluesBoard[i+1][j-1] == '?')	flagMines(i+1,j-1);
-					if (i+1<length && j>=0 && cluesBoard[i+1][j] == '?')	flagMines(i+1,j);
-					if (i+1<length && j+1<width && cluesBoard[i+1][j+1] == '?')	flagMines(i+1,j+1);
+					if (i-1>=0 && j-1>=0 && cluesBoard[i-1][j-1] == '?') {
+						flagMines(i-1,j-1);
+						treeOfInfluence.put(constructString(i-1+1, j-1+1),constructString(i+1, j+1));
+					}
+					if (i-1>=0 && j>=0 && cluesBoard[i-1][j] == '?') {
+						flagMines(i-1,j);
+						treeOfInfluence.put(constructString(i-1+1, j+1),constructString(i+1, j+1));
+					}
+					if (i-1>=0 && j+1<width && cluesBoard[i-1][j+1] == '?') {
+						flagMines(i-1,j+1);
+						treeOfInfluence.put(constructString(i-1+1, j+1+1),constructString(i+1, j+1));
+					}
+					if (i>=0 && j-1>=0 && cluesBoard[i][j-1] == '?') {
+						flagMines(i,j-1);
+						treeOfInfluence.put(constructString(i+1, j-1+1),constructString(i+1, j+1));
+					}
+					if (i>=0 && j+1<width && cluesBoard[i][j+1] == '?') {
+						flagMines(i,j+1);
+						treeOfInfluence.put(constructString(i+1, j+1+1),constructString(i+1, j+1));
+					}
+					if (i+1<length && j-1>=0 && cluesBoard[i+1][j-1] == '?') {
+						flagMines(i+1,j-1);
+						treeOfInfluence.put(constructString(i+1+1, j-1+1),constructString(i+1, j+1));
+					}
+					if (i+1<length && j>=0 && cluesBoard[i+1][j] == '?') {
+						flagMines(i+1,j);
+						treeOfInfluence.put(constructString(i+1+1, j+1),constructString(i+1, j+1));
+					}
+					if (i+1<length && j+1<width && cluesBoard[i+1][j+1] == '?') {
+						flagMines(i+1,j+1);
+						treeOfInfluence.put(constructString(i+1+1, j+1+1),constructString(i+1, j+1));
+					}
 				}
 				
 				if(cluesBoard[i][j] != '*' && cluesBoard[i][j] != '?'  && (Character.getNumericValue(cluesBoard[i][j])-neighbourMines(i,j)) == 0) {
-					if (i-1>=0 && j-1>=0 && cluesBoard[i-1][j-1] == '?' && cluesFound[i-1][j-1]==false)	pushToQueue(i-1,j-1);
-					if (i-1>=0 && j>=0 && cluesBoard[i-1][j] == '?' && cluesFound[i-1][j]==false)	pushToQueue(i-1,j);
-					if (i-1>=0 && j+1<width && cluesBoard[i-1][j+1] == '?' && cluesFound[i-1][j+1]==false)	pushToQueue(i-1,j+1);
-					if (i>=0 && j-1>=0 && cluesBoard[i][j-1] == '?' && cluesFound[i][j-1]==false)	pushToQueue(i,j-1);
-					if (i>=0 && j+1<width && cluesBoard[i][j+1] == '?' && cluesFound[i][j+1]==false)	pushToQueue(i,j+1);
-					if (i+1<length && j-1>=0 && cluesBoard[i+1][j-1] == '?' && cluesFound[i+1][j-1]==false)	pushToQueue(i+1,j-1);
-					if (i+1<length && j>=0 && cluesBoard[i+1][j] == '?' && cluesFound[i+1][j]==false)	pushToQueue(i+1,j);
-					if (i+1<length && j+1<width && cluesBoard[i+1][j+1] == '?' && cluesFound[i+1][j+1]==false)	pushToQueue(i+1,j+1);
+					if (i-1>=0 && j-1>=0 && cluesBoard[i-1][j-1] == '?' && cluesFound[i-1][j-1]==false) {
+						pushToQueue(i-1,j-1);
+						treeOfInfluence.put(constructString(i-1+1, j-1+1),constructString(i+1, j+1));
+					}
+					if (i-1>=0 && j>=0 && cluesBoard[i-1][j] == '?' && cluesFound[i-1][j]==false) {
+						pushToQueue(i-1,j);
+						treeOfInfluence.put(constructString(i-1+1, j+1),constructString(i+1, j+1));
+					}
+					if (i-1>=0 && j+1<width && cluesBoard[i-1][j+1] == '?' && cluesFound[i-1][j+1]==false) {
+						pushToQueue(i-1,j+1);
+						treeOfInfluence.put(constructString(i-1+1, j+1+1),constructString(i+1, j+1));
+					}
+					if (i>=0 && j-1>=0 && cluesBoard[i][j-1] == '?' && cluesFound[i][j-1]==false) {
+						pushToQueue(i,j-1);
+						treeOfInfluence.put(constructString(i+1, j-1+1),constructString(i+1, j+1));
+					}
+					if (i>=0 && j+1<width && cluesBoard[i][j+1] == '?' && cluesFound[i][j+1]==false) {
+						pushToQueue(i,j+1);
+						treeOfInfluence.put(constructString(i+1, j+1+1),constructString(i+1, j+1));
+					}
+					if (i+1<length && j-1>=0 && cluesBoard[i+1][j-1] == '?' && cluesFound[i+1][j-1]==false) {
+						pushToQueue(i+1,j-1);
+						treeOfInfluence.put(constructString(i+1+1, j-1+1),constructString(i+1, j+1));
+					}
+					if (i+1<length && j>=0 && cluesBoard[i+1][j] == '?' && cluesFound[i+1][j]==false) {
+						pushToQueue(i+1,j);
+						treeOfInfluence.put(constructString(i+1+1, j+1),constructString(i+1, j+1));
+					}
+					if (i+1<length && j+1<width && cluesBoard[i+1][j+1] == '?' && cluesFound[i+1][j+1]==false) {
+						pushToQueue(i+1,j+1);
+						treeOfInfluence.put(constructString(i+1+1, j+1+1),constructString(i+1, j+1));
+					}
 				}
 			}
 		}
@@ -356,6 +435,7 @@ public class AI_Minesweeper {
 							for(int y=0;y<3;y++) {
 								if(centre[x][y]==-1) {
 									flagMines(i-1+x, j-1+y);
+									treeOfInfluence.put(constructString(i-1+x, j-1+y),constructString(i+1, j+1));
 								}
 							}
 						}
@@ -550,5 +630,18 @@ public class AI_Minesweeper {
 			}
 		}
 		return copyArr;
+	}
+	
+	public static String constructString(int i, int j) {
+		return i+"-"+j;
+	}
+	
+	public static void printHashMap(LinkedHashMap<String,String> map) {
+		System.out.println();
+		System.out.println("Child   ->   Parent");
+		System.out.println();
+		for(String key:map.keySet()) {
+			System.out.println(key+"     ->  "+map.get(key));
+		}
 	}
 }
