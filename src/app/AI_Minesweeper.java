@@ -648,11 +648,19 @@ public class AI_Minesweeper {
 	 */
 	public static void printHashMap(LinkedHashMap<String,String> map) {
 		System.out.println();
-		System.out.println("Child   ->   Parent");
+		System.out.println("Child -> Parent");
 		System.out.println();
-		for(String key:map.keySet()) {
-			System.out.println(key+"     ->  "+map.get(key));
+		
+		for(int i=1;i<=length;i++) {
+			for(int j=1;j<=width;j++) {
+				String key=i+"-"+j;
+				System.out.print(key+" -> ");
+				while((! map.get(key).equals("Random query to User"))) {
+					key = map.get(key);
+					System.out.print(key+" -> ");
+				}
+				System.out.println("Random query to User");
+			}
 		}
-		System.out.println();
 	}
 }
